@@ -6,6 +6,7 @@ from bluerov_interface import BlueROV
 from pymavlink import mavutil
 from move import process_frame
 import numpy as np
+import cv2
 from dt_apriltags import Detector
 
 # Create the video object
@@ -39,17 +40,25 @@ at_detector = Detector(
     debug=0,
 )
 
+camera_matrix = np.array([ 353.571428571, 0, 320, 0, 353.571428571, 180, 0, 0, 1]).reshape((3,3))
+
+camera_params = (
+    camera_matrix[0, 0],
+    camera_matrix[1, 1],
+    camera_matrix[0, 2],
+    camera_matrix[1, 2],
+)
+
 
 # find the output of error(error: distance from center to april tag)
-def find_pid(x_list, y_list):
-    global pid_horizontal, pid_vertical
-    xpid = []
-    ypid = []
-    for x in x_list:
-        xpid.append(pid_horizontal.update(x))
-    for y in y_list:
-        ypid.append(pid_vertical.update(y))
-    return xpid, ypid
+def find_pid(tags, width, height):
+    finalx = 0
+    finaly = 0
+    for tag in tags:
+        (cX, cY) = int(tag.center[0]), int(tag.center[1])
+        finaly = pid_vertical.update(cX)
+        finalx = pid_horizontal.update(cY)
+    return finalx, finaly
 
 
 def _get_frame():
@@ -60,23 +69,30 @@ def _get_frame():
 
     try:
         while True:
+            # print("HERE")
             if video.frame_available():
                 frame = video.frame()
-                (x, y) = process_frame(frame, at_detector)
+                # print("HERE2")
+                width, height, _ = frame.shape  
+                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                tags = at_detector.detect(frame, True,  camera_params, 0.1)
                 # ^ This is the X and Y of every AprilTag in the pic
-                (pidx, pidy) = find_pid(x, y)
-                # Now do something with the PID, you tell me what?
-                vertical_power = sum(pidx) / len(pidx)
-                lateral_power = sum(pidy) / len(pidy)
-                # What the heck is pidx and pidy again? Like what does it represent
+                if len(tags):
+                    for tag in tags:
+                        outputx = pid_horizontal.update(int(tag.center[0]))
+                        outputy = pid_vertical.update(int(tag.center[1]))
+                    vertical_power = outputy
+                    lateral_power = outputx
 
     except KeyboardInterrupt:
         return
 
 
 def _send_rc():
+    bluerov.disarm()
     bluerov.set_vertical_power(vertical_power)
     bluerov.set_lateral_power(lateral_power)
+    
 
 
 # Start the video thread
@@ -91,8 +107,13 @@ rc_thread.start()
 try:
     while True:
         mav_comn.wait_heartbeat()
+        #_get_frame()
+
 except KeyboardInterrupt:
     video_thread.join()
     rc_thread.join()
+    bluerov.set_rc_channel(5,1500)
+    bluerov.set_rc_channel(6,1500)
+    bluerov.set_rc_channel(3,1500)
     bluerov.disarm()
     print("Exiting...")

@@ -5,7 +5,6 @@ import numpy as np
 def process_frame(
     frame,
     at_detector,
-    camera_matrix=np.array([1060.71, 0, 960, 0, 1060.71, 540, 0, 0, 1]).reshape((3, 3)),
     draw=False,
 ):
     """
@@ -13,12 +12,6 @@ def process_frame(
     """
     x = []
     y = []
-    camera_params = (
-        camera_matrix[0, 0],
-        camera_matrix[1, 1],
-        camera_matrix[0, 2],
-        camera_matrix[1, 2],
-    )
     height, width, _ = frame.shape
     center = (int(width / 2), int(height / 2))
     if draw:
@@ -29,7 +22,6 @@ def process_frame(
             frame, (0, int(height / 2)), (int(width), int(height / 2)), (255, 0, 0), 5
         )
     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)  # <-
-    tags = at_detector.detect(frame, True, camera_params, 0.1)
     if draw:
         color_img = cv2.cvtColor(frame, cv2.COLOR_GRAY2RGB)
     for tag in tags:

@@ -154,7 +154,7 @@ if __name__ == "__main__":
     while not video.frame_available():
         waited += 1
         print("\r  Frame not available (x{})".format(waited), end="")
-        cv2.waitKey(30)
+        # cv2.waitKey(30)
     print('\nSuccess!\nStarting streaming - press "q" to quit.')
 
     while True:
@@ -162,7 +162,8 @@ if __name__ == "__main__":
         if video.frame_available():
             # Only retrieve and display a frame if it's new
             frame = video.frame()
-            cv2.imshow("frame", frame)
+            print("frame received")
+            # cv2.imshow("frame", frame)
         # Allow frame to display, and check if user wants to quit
-        if cv2.waitKey(1) & 0xFF == ord("q"):
-            break
+        # if cv2.waitKey(1) & 0xFF == ord("q"):
+        #     break

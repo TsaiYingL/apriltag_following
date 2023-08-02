@@ -13,8 +13,8 @@ from dt_apriltags import Detector
 video = Video()
 
 # Create the PID object
-pid_vertical = PID(K_p=0.1, K_i=0.0, K_d=0.01, integral_limit=1)
-pid_horizontal = PID(K_p=0.1, K_i=0.0, K_d=0.01, integral_limit=1)
+pid_vertical = PID(K_p=20, K_i=0.0, K_d=0.01, integral_limit=1)
+pid_horizontal = PID(K_p=100, K_i=0.0, K_d=50, integral_limit=1)
 
 # Create the mavlink connection
 mav_comn = mavutil.mavlink_connection("udpin:0.0.0.0:14550")
@@ -79,19 +79,38 @@ def _get_frame():
                 # ^ This is the X and Y of every AprilTag in the pic
                 if len(tags):
                     for tag in tags:
-                        outputx = pid_horizontal.update(int(tag.center[0]))
-                        outputy = pid_vertical.update(int(tag.center[1]))
+                        # TODO: change this please
+                        percentx = 0.5 - tag.center[0] / width 
+                        percenty = 0.5 - tag.center[1] / height
+                        print(percentx, percenty)
+                        # if tag.center[0] < width / 2:
+                        #     percentx = -percentx
+                        # if tag.center[1] < height / 2:
+                        #     percenty = -percenty
+                        outputx = pid_horizontal.update(percentx)
+                        outputy = pid_vertical.update(percenty)
                     vertical_power = outputy
                     lateral_power = outputx
+                else:
+                    print("no tags")
+                    vertical_power = 0
+                    lateral_power = 0
+                print(f"power {vertical_power}, {lateral_power}")
+                
+
 
     except KeyboardInterrupt:
         return
 
 
 def _send_rc():
-    bluerov.disarm()
-    bluerov.set_vertical_power(vertical_power)
-    bluerov.set_lateral_power(lateral_power)
+    global vertical_power, lateral_power
+    bluerov.set_rc_channels_to_neutral()
+    # bluerov.set_rc_channel(9, 1100)
+    while True:
+        bluerov.arm()
+        bluerov.set_vertical_power(int(-vertical_power))
+        # bluerov.set_lateral_power(-int(lateral_power))
     
 
 
@@ -112,8 +131,6 @@ try:
 except KeyboardInterrupt:
     video_thread.join()
     rc_thread.join()
-    bluerov.set_rc_channel(5,1500)
-    bluerov.set_rc_channel(6,1500)
-    bluerov.set_rc_channel(3,1500)
+    bluerov.set_rc_channels_to_neutral()
     bluerov.disarm()
     print("Exiting...")

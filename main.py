@@ -13,7 +13,7 @@ from dt_apriltags import Detector
 video = Video()
 
 # Create the PID object
-pid_vertical = PID(K_p=20, K_i=0.0, K_d=0.01, integral_limit=1)
+pid_vertical = PID(K_p=50, K_i=0.0, K_d=0.01, integral_limit=1) #the robot reaches the april tag and then floats up instead of maintaining its depth
 pid_horizontal = PID(K_p=100, K_i=0.0, K_d=50, integral_limit=1)
 
 # Create the mavlink connection
@@ -73,16 +73,17 @@ def _get_frame():
             if video.frame_available():
                 frame = video.frame()
                 # print("HERE2")
-                width, height, _ = frame.shape  
+                height, width, _ = frame.shape  
                 frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
                 tags = at_detector.detect(frame, True,  camera_params, 0.1)
                 # ^ This is the X and Y of every AprilTag in the pic
                 if len(tags):
                     for tag in tags:
                         # TODO: change this please
-                        percentx = 0.5 - tag.center[0] / width 
+                        print(f"width: {width, tag.center[0]/width}, height: {height, tag.center[1]/height}")
+                        percentx = 0.5 - tag.center[0] / width
                         percenty = 0.5 - tag.center[1] / height
-                        print(percentx, percenty)
+                        print(f"x percent: {percentx}, y percent: {percenty}")
                         # if tag.center[0] < width / 2:
                         #     percentx = -percentx
                         # if tag.center[1] < height / 2:
@@ -95,7 +96,7 @@ def _get_frame():
                     print("no tags")
                     vertical_power = 0
                     lateral_power = 0
-                print(f"power {vertical_power}, {lateral_power}")
+                print(f"power v: {vertical_power}, h: {lateral_power}")
                 
 
 
@@ -107,9 +108,12 @@ def _send_rc():
     global vertical_power, lateral_power
     bluerov.set_rc_channels_to_neutral()
     # bluerov.set_rc_channel(9, 1100)
+    bluerov.arm()
+    # For OLD ROBOT Uncomment below line. For NEW robot, comment it
+    bluerov.mav_connection.set_mode(19)
     while True:
         bluerov.arm()
-        bluerov.set_vertical_power(int(-vertical_power))
+        #bluerov.set_vertical_power(int(-vertical_power))
         # bluerov.set_lateral_power(-int(lateral_power))
     
 

@@ -13,7 +13,7 @@ from dt_apriltags import Detector
 video = Video()
 
 # Create the PID object
-pid_vertical = PID(K_p=25, K_i=0.0, K_d=0.01, integral_limit=1) #the robot reaches the april tag and then floats up instead of maintaining its depth
+pid_vertical = PID(K_p=40, K_i=0.0, K_d=0.01, integral_limit=1) #the robot reaches the april tag and then floats up instead of maintaining its depth
 pid_horizontal = PID(K_p=20, K_i=0.0, K_d=30, integral_limit=1)
 
 # Create the mavlink connection
@@ -110,7 +110,7 @@ def _send_rc():
     # bluerov.set_rc_channel(9, 1100)
     bluerov.arm()
     # For OLD ROBOT Uncomment below line. For NEW robot, comment it
-    #bluerov.mav_connection.set_mode(19)
+    bluerov.mav_connection.set_mode(19)
     while True:
         bluerov.arm()
         bluerov.set_vertical_power(int(vertical_power))
@@ -130,7 +130,6 @@ rc_thread.start()
 try:
     while True:
         mav_comn.wait_heartbeat()
-        #_get_frame()
 
 except KeyboardInterrupt:
     video_thread.join()
